@@ -56,7 +56,9 @@ def config():
             for n, b in BACKENDS.items()
         ],
         "labelled": len(load_emails(False, None)),
-        "recordings": sorted({p.stem.split("__")[0] for p in OUT.glob("*.json")}, reverse=True),
+        # Backups for the stage first, then newest first.
+        "recordings": sorted(sorted({p.stem.split("__")[0] for p in OUT.glob("*.json")}, reverse=True),
+                             key=lambda r: not r.startswith("backup")),
     }
 
 
@@ -71,7 +73,7 @@ def run(backend: str, limit: int = 100, history: bool = False, profile: bool = F
     session = session or f"web-{datetime.now():%Y%m%d-%H%M%S}"
 
     def events():
-        yield event("start", {"total": len(emails)})
+        yield event("start", {"total": len(emails), "history": history, "profile": profile})
         try:
             c = connect(backend)
         except Exception as e:
@@ -103,7 +105,7 @@ def replay(recording: str, backend: str, redact: bool = True):
     index = {r["id"]: i for i, r in enumerate(ordered)}
 
     def events():
-        yield event("start", {"total": len(run["records"])})
+        yield event("start", {"total": len(run["records"]), "history": run["history"], "profile": run.get("profile", False)})
         start = time.perf_counter()
         for rec in sorted(run["records"], key=lambda r: r["t"]):
             time.sleep(max(0.0, rec["t"] - (time.perf_counter() - start)))

@@ -1,6 +1,6 @@
 # One email classifier, three System One backends
 
-The same emails and question (`action` / `review` / `other`) go to Jev (US), EigenJev (EU) and Laya (on this laptop). Only the base URL, key and model name change: see `backends.py`.
+The same emails and question (`action` / `review` / `other`) go to Jev (US), EigenJev (EU) and Kev-4B (on this laptop). Only the base URL, key and model name change: see `backends.py`.
 
 ## Setup
 
@@ -9,7 +9,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env                       # fill in keys
 .venv/bin/python fetch_emails.py           # ~1000 received emails via the gws CLI -> data/
 .venv/bin/python label.py                  # a/r/o per email, 300 target
-LAYA_HOST=127.0.0.1 LAYA_DEVICE=mps LAYA_MODELS=english LAYA_PRELOAD=1 HF_HOME=.cache/huggingface .venv/bin/laya-serve
+git clone https://github.com/jaredpalmer/kev.git .cache/kev && (cd .cache/kev && uv sync --extra serve)
+(cd .cache/kev && HF_HOME=../huggingface uv run --extra serve python -m kev.serve --run jaredpalmer/kev-4b --port 8009)
 ```
 
 ## Demo
@@ -35,4 +36,4 @@ LAYA_HOST=127.0.0.1 LAYA_DEVICE=mps LAYA_MODELS=english LAYA_PRELOAD=1 HF_HOME=.
 - **Calibration chart**: x = top option's probability, y = share actually correct.
 - **Cold → action**: strangers labelled `other` that the backend marked `action`.
 
-For Laya offline, add `HF_HUB_OFFLINE=1` to the `laya-serve` line.
+For Kev offline, add `HF_HUB_OFFLINE=1` to the `kev.serve` line.

@@ -1,5 +1,4 @@
 fastapi==0.141.1
-laya[serve]==0.3.10
 matplotlib==3.11.2
 python-dotenv==1.2.3
 rich==15.0.0

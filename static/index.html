@@ -126,7 +126,7 @@ async function init() {
 function reset(total) {
   sources.forEach(s => s.close());
   sources = [];
-  const perRow = total <= 100 ? 10 : total <= 200 ? 15 : 20;
+  const perRow = total <= 50 ? 10 : 20;
   for (const c of Object.values(cols)) {
     Object.assign(c, { total, results: [] });
     c.el.classList.remove("failed");
@@ -142,7 +142,12 @@ function start(urlFor) {
   for (const [name, c] of Object.entries(cols)) {
     const es = new EventSource(urlFor(name));
     sources.push(es);
-    es.addEventListener("start", e => { const t = JSON.parse(e.data).total; if (t !== c.total) resize(c, t); });
+    es.addEventListener("start", e => {
+      const d = JSON.parse(e.data);
+      if (d.total !== c.total) resize(c, d.total);
+      // Show what context this run used (matters for replays).
+      $("#history").checked = d.history; $("#profile").checked = d.profile;
+    });
     es.addEventListener("result", e => add(c, JSON.parse(e.data)));
     es.addEventListener("failed", e => { es.close(); fail(c, JSON.parse(e.data).error); });
     es.addEventListener("done", () => { es.close(); refreshRecordings(); });
@@ -154,7 +159,7 @@ function start(urlFor) {
 function resize(c, total) {
   c.total = total;
   const grid = $(".grid", c.el);
-  grid.style.gridTemplateColumns = `repeat(${total <= 100 ? 10 : total <= 200 ? 15 : 20}, 1fr)`;
+  grid.style.gridTemplateColumns = `repeat(${total <= 50 ? 10 : 20}, 1fr)`;
   grid.innerHTML = '<div class="cell"></div>'.repeat(total);
 }
 

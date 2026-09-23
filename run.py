@@ -1,6 +1,6 @@
 """Send the same emails and question to each backend; show answers live, then the summary.
 
-python run.py --backend jev|eigenjev|laya|all [--limit 100] [--history] [--profile] [--no-redact] [--unlabelled]
+python run.py --backend jev|eigenjev|kev|all [--limit 100] [--history] [--profile] [--no-redact] [--unlabelled]
 python run.py --replay out/run-....json     # re-print a recorded run at its original pace, no network
 """
 
@@ -22,7 +22,7 @@ from questions import CATEGORY, build
 console = Console(highlight=False)
 EMAILS = Path("data/emails.jsonl")
 LABELS = Path("data/labels.jsonl")
-WORKERS = {"laya": 1, "kev": 1, "jev": 4}  # Local models: parallel only queues. Jev: throttles bursts.
+WORKERS = {"kev": 1, "jev": 4}  # Local models: parallel only queues. Jev: throttles bursts.
 COLOURS = {"action": "bold yellow", "review": "cyan", "other": "dim"}
 
 
