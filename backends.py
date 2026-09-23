@@ -16,7 +16,7 @@ BACKENDS = {
 # Pinned so nothing changes overnight. EigenJev keys only accept "jev-latest" (serves openjev-0.1).
 MODELS = {"jev": "jev-1.13.0", "eigenjev": "jev-latest", "kev": "kev-latest"}
 
-PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "kev": 0.0}  # EigenJev price unknown
+PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": 0.0, "kev": 0.0}  # EigenJev: free for now (Sep 2026)
 
 
 def client(name: str) -> TypeSafeClient:

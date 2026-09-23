@@ -81,6 +81,7 @@
   <span><i style="background:var(--bad)"></i>wrong</span>
   <span><i style="background:var(--ok);opacity:.25"></i>faint = model unsure</span>
   <span>Same square = same email in every column</span>
+  <span>*EigenJev is free for now</span>
 </div>
 
 <script>
@@ -198,7 +199,7 @@ function render(c) {
   set("p50", ms.length ? Math.round(ms[ms.length >> 1]) + " ms" : "–");
   const price = c.cfg.price;
   const tokens = ok.reduce((s, r) => s + r.tokens, 0) / (ok.length || 1);
-  set("cost", c.cfg.runs_in === "This laptop" ? "$0" : price == null ? "?" : ok.length ? "$" + (tokens * 100 * price / 1e6).toFixed(4) : "–");
+  set("cost", c.cfg.runs_in === "This laptop" ? "$0" : price === 0 ? "Free*" : price == null ? "?" : ok.length ? "$" + (tokens * 100 * price / 1e6).toFixed(4) : "–");
   $(".bar div", c.el).style.width = pct(c.results.length / (c.total || 1));
   calibration(c, labelled);
 }

@@ -70,6 +70,8 @@ def summarise(run: dict) -> dict:
 def cost(s: dict) -> str:
     if s["runs_in"] == "This laptop":
         return "$0 (local)"
+    if s["cost_100"] == 0:
+        return "$0 (free for now)"
     return "unknown" if s["cost_100"] is None else f"${s['cost_100']:.4f}"
 
 
