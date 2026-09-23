@@ -1,0 +1,9 @@
+fastapi==0.141.1
+laya[serve]==0.3.10
+matplotlib==3.11.2
+python-dotenv==1.2.3
+rich==15.0.0
+torch==2.14.0
+transformers==5.17.0
+typesafe-sdk==0.7.1
+uvicorn==0.53.0
