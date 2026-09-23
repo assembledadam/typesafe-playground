@@ -93,8 +93,12 @@ def read(msg_id: str) -> dict | None:
     }
 
 
+# Adam's out-of-office auto-replied to everyone, including cold pitches; that is not knowing them.
+NOT_AUTO_REPLY = '-subject:"out of the office"'
+
+
 def sent_to_before(address: str, timestamp: int) -> bool:
-    q = f"in:sent to:{address} before:{timestamp}"
+    q = f"in:sent to:{address} before:{timestamp} {NOT_AUTO_REPLY}"
     res = gws("users", "messages", "list", "--params", json.dumps({"userId": "me", "q": q, "maxResults": 1}))
     return bool(res.get("messages"))
 
@@ -121,10 +125,24 @@ def mark_history(emails: list[dict]) -> None:
         list(pool.map(check, by_sender.values()))
 
 
+def write(emails: list[dict]) -> None:
+    OUT.parent.mkdir(exist_ok=True)
+    OUT.write_text("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in emails))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", type=int, default=1300)
+    ap.add_argument("--history-only", action="store_true", help="recompute adam_has_emailed_them on the existing file")
     args = ap.parse_args()
+
+    if args.history_only:
+        emails = [json.loads(l) for l in OUT.open()]
+        before = sum(e["adam_has_emailed_them"] for e in emails)
+        mark_history(emails)
+        write(emails)
+        print(f"previously emailed: {before} -> {sum(e['adam_has_emailed_them'] for e in emails)}")
+        return
 
     RAW.mkdir(parents=True, exist_ok=True)
     ids = list_ids(int(args.target * 1.6))
@@ -142,10 +160,7 @@ def main() -> None:
 
     mark_history(kept)
 
-    OUT.parent.mkdir(exist_ok=True)
-    with OUT.open("w") as f:
-        for m in kept:
-            f.write(json.dumps(m, ensure_ascii=False) + "\n")
+    write(kept)
     known = sum(m["adam_has_emailed_them"] for m in kept)
     print(f"fetched {len(fetched)}, kept {len(kept)} ({len(per_sender)} senders, {known} previously emailed) -> {OUT}")
 
