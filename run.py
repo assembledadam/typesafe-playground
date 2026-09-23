@@ -10,6 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+from typing import Iterator
 
 from rich.console import Console
 from rich.rule import Rule
@@ -21,7 +22,7 @@ from questions import CATEGORY, build
 console = Console(highlight=False)
 EMAILS = Path("data/emails.jsonl")
 LABELS = Path("data/labels.jsonl")
-WORKERS = {"laya": 1}  # one local model: parallel requests only queue and inflate latency
+WORKERS = {"laya": 1, "jev": 4}  # Laya: one local model, parallel only queues. Jev: throttles bursts.
 COLOURS = {"action": "bold yellow", "review": "cyan", "other": "dim"}
 
 
@@ -82,26 +83,43 @@ def ask(c, email: dict, history: bool, t0: float) -> dict:
     return rec
 
 
-def run_backend(name: str, emails: list[dict], history: bool, redact: bool, names: dict) -> dict | None:
-    b = BACKENDS[name]
-    try:
-        c = client(name)
-        c.system_one({"text": "ping"}, {"category": CATEGORY})
-    except Exception as e:
-        console.print(f"[red]Skipping {name}: {type(e).__name__}: {str(e)[:80]}[/]")
-        return None
+def connect(name: str):
+    """Client for a backend, or raise if it's misconfigured or unreachable."""
+    c = client(name)
+    c.system_one({"text": "ping"}, {"category": CATEGORY})
+    return c
 
-    run = {"backend": name, "runs_in": b["runs_in"], "model": MODELS[name], "history": history, "records": []}
-    header(run)
+
+def stream(c, name: str, emails: list[dict], history: bool, names: dict) -> Iterator[dict]:
+    """Records in completion order; shared by the terminal and the web UI."""
     t0 = time.perf_counter()
+    by_id = {e["id"]: e for e in emails}
     with ThreadPoolExecutor(WORKERS.get(name, 8)) as pool:
         futures = [pool.submit(ask, c, e, history, t0) for e in emails]
         for f in as_completed(futures):
             rec = f.result()
-            e = next(x for x in emails if x["id"] == rec["id"])
+            e = by_id[rec["id"]]
             rec["who"], rec["who_redacted"] = e["from_name"], names[e["from_email"]]
-            run["records"].append(rec)
-            console.print(line(rec, redact))
+            yield rec
+
+
+def new_run(name: str, history: bool) -> dict:
+    return {"backend": name, "runs_in": BACKENDS[name]["runs_in"], "model": MODELS[name], "history": history, "records": []}
+
+
+def run_backend(name: str, emails: list[dict], history: bool, redact: bool, names: dict) -> dict | None:
+    try:
+        c = connect(name)
+    except Exception as e:
+        console.print(f"[red]Skipping {name}: {type(e).__name__}: {str(e)[:80]}[/]")
+        return None
+
+    run = new_run(name, history)
+    header(run)
+    t0 = time.perf_counter()
+    for rec in stream(c, name, emails, history, names):
+        run["records"].append(rec)
+        console.print(line(rec, redact))
     console.print(f"[dim]{len(emails)} emails in {time.perf_counter() - t0:.1f} s[/]\n")
     return run
 

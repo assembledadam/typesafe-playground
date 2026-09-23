@@ -15,6 +15,9 @@ LAYA_HOST=127.0.0.1 LAYA_DEVICE=mps LAYA_MODELS=english LAYA_PRELOAD=1 HF_HOME=.
 ## Demo
 
 ```bash
+.venv/bin/python server.py                          # web UI: http://localhost:8080 (press r to run)
+# backup with no network: http://localhost:8080/?replay=<recording>&limit=100
+
 .venv/bin/python run.py --limit 100                 # all backends, redacted, recorded to out/
 .venv/bin/python run.py --limit 100 --history       # + "has Adam emailed this sender before?"
 .venv/bin/python run.py --replay out/run-XXXX.json  # no network: re-prints a recorded run at its original pace

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>One question, three System One backends</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #0b0f17; --panel: #131a26; --line: #243044; --text: #e6edf7; --dim: #7d8aa3;
+    --ok: #22c55e; --bad: #ef4444; --action: #facc15; --review: #38bdf8; --other: #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 18px/1.35 -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif; }
+  header { display: flex; gap: 32px; align-items: center; justify-content: space-between; padding: 22px 32px 10px; }
+  h1 { margin: 0; font-size: 34px; letter-spacing: -0.02em; }
+  h1 small { display: block; font-size: 18px; font-weight: 400; color: var(--dim); margin-top: 4px; }
+  pre.code { margin: 0; padding: 12px 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+             font: 15px/1.5 "SF Mono", Menlo, monospace; color: #c9d4e5; }
+  pre.code .url { color: #fbbf24; }
+  .controls { display: flex; gap: 18px; align-items: center; padding: 6px 32px 16px; color: var(--dim); font-size: 16px; }
+  .controls select, .controls button { font: inherit; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; }
+  .controls button.go { background: #2563eb; border-color: #2563eb; font-weight: 600; padding: 8px 22px; cursor: pointer; }
+  .controls label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+  .controls .spacer { flex: 1; }
+  main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 0 32px 24px; }
+  .col { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .col.failed { opacity: 0.5; }
+  .head { display: flex; align-items: baseline; gap: 10px; }
+  .head .flag { font-size: 30px; }
+  .head .name { font-size: 28px; font-weight: 700; }
+  .head .where { color: var(--dim); font-size: 16px; }
+  .head .model { margin-left: auto; color: var(--dim); font: 13px "SF Mono", Menlo, monospace; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stat .v { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .sub { font-size: 13px; color: var(--dim); }
+  .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar div { height: 100%; width: 0; background: #2563eb; transition: width 0.15s; }
+  .grid { display: grid; gap: 4px; }
+  .cell { aspect-ratio: 1; border-radius: 3px; background: #1c2535; }
+  .cell.ok { background: var(--ok); }
+  .cell.bad { background: var(--bad); }
+  .cell.err { background: transparent; outline: 1px dashed var(--dim); }
+  .cell.nolabel { background: #64748b; }
+  .lower { display: grid; grid-template-columns: 1fr 190px; gap: 14px; align-items: end; }
+  .ticker { font-size: 15px; min-height: 140px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+  .ticker div { display: flex; gap: 8px; white-space: nowrap; overflow: hidden; }
+  .ticker .who { flex: 1; overflow: hidden; text-overflow: ellipsis; color: var(--dim); }
+  .pill { font-weight: 600; min-width: 62px; }
+  .pill.action { color: var(--action); } .pill.review { color: var(--review); } .pill.other { color: var(--other); }
+  .ticker .ms { color: var(--dim); min-width: 62px; text-align: right; font-variant-numeric: tabular-nums; }
+  .msg { color: var(--bad); font-size: 15px; }
+  svg text { fill: var(--dim); font-size: 11px; }
+  .legend { color: var(--dim); font-size: 14px; padding: 0 32px 18px; display: flex; gap: 22px; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Same emails. Same question. Three backends.
+    <small>Is this email <b style="color:var(--action)">action</b>, <b style="color:var(--review)">review</b> or <b style="color:var(--other)">other</b>? Only the URL changes.</small>
+  </h1>
+  <pre class="code" id="code"></pre>
+</header>
+
+<div class="controls">
+  <label>Emails <select id="limit"><option>50</option><option selected>100</option><option>300</option></select></label>
+  <label><input type="checkbox" id="history"> Tell it if Adam has emailed the sender</label>
+  <label><input type="checkbox" id="redact" checked> Redact senders</label>
+  <button class="go" id="run">Run ▶</button>
+  <span class="spacer"></span>
+  <label>Replay <select id="recording"><option value="">–</option></select></label>
+  <button id="replay">Replay ⟲</button>
+</div>
+
+<main id="cols"></main>
+
+<div class="legend">
+  <span><i style="background:var(--ok)"></i>right</span>
+  <span><i style="background:var(--bad)"></i>wrong</span>
+  <span><i style="background:var(--ok);opacity:.25"></i>faint = model unsure</span>
+  <span>Same square = same email in every column</span>
+</div>
+
+<script>
+const PLACES = {
+  "US": ["🇺🇸", "US"],
+  "EU (Berlin)": ["🇪🇺", "Berlin"],
+  "This laptop": ["💻", "this laptop"],
+};
+const BUCKETS = [1 / 3, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0001];
+let cfg, cols = {}, sources = [];
+
+const $ = (sel, el = document) => el.querySelector(sel);
+const pct = x => x == null || isNaN(x) ? "–" : Math.round(x * 100) + "%";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function init() {
+  cfg = await (await fetch("/api/config")).json();
+  const w = Math.max(...cfg.backends.map(b => b.name.length)) + 3;
+  $("#code").innerHTML = "BACKENDS = {\n" + cfg.backends.map(b =>
+    `  ${('"' + b.name + '":').padEnd(w)} <span class="url">"${esc(b.base_url)}"</span>,`).join("\n") + "\n}";
+  for (const r of cfg.recordings) $("#recording").add(new Option(r, r));
+  $("#cols").innerHTML = cfg.backends.map(b => {
+    const [flag, where] = PLACES[b.runs_in] || ["", b.runs_in];
+    return `<section class="col" id="col-${b.name}">
+      <div class="head"><span class="flag">${flag}</span><span class="name">${b.name}</span>
+        <span class="where">${where}</span><span class="model">${esc(b.model)}</span></div>
+      <div class="stats">
+        <div class="stat"><div class="v" data-k="acc">–</div><div class="k">Accuracy</div></div>
+        <div class="stat"><div class="v" data-k="sure">–</div><div class="k">Right when &gt;0.9 sure</div><div class="sub" data-k="sureShare"></div></div>
+        <div class="stat"><div class="v" data-k="p50">–</div><div class="k">Median latency</div></div>
+        <div class="stat"><div class="v" data-k="cost">–</div><div class="k">Cost / 100 emails</div></div>
+      </div>
+      <div class="bar"><div></div></div>
+      <div class="grid"></div>
+      <div class="lower"><div class="ticker"></div><svg viewBox="0 0 190 190" width="190" height="190"></svg></div>
+    </section>`;
+  }).join("");
+  for (const b of cfg.backends) cols[b.name] = { cfg: b, el: $(`#col-${b.name}`) };
+  reset(+$("#limit").value);
+}
+
+function reset(total) {
+  sources.forEach(s => s.close());
+  sources = [];
+  const perRow = total <= 100 ? 10 : total <= 200 ? 15 : 20;
+  for (const c of Object.values(cols)) {
+    Object.assign(c, { total, results: [] });
+    c.el.classList.remove("failed");
+    const grid = $(".grid", c.el);
+    grid.style.gridTemplateColumns = `repeat(${perRow}, 1fr)`;
+    grid.innerHTML = '<div class="cell"></div>'.repeat(total);
+    $(".ticker", c.el).innerHTML = "";
+    render(c);
+  }
+}
+
+function start(urlFor) {
+  for (const [name, c] of Object.entries(cols)) {
+    const es = new EventSource(urlFor(name));
+    sources.push(es);
+    es.addEventListener("start", e => { const t = JSON.parse(e.data).total; if (t !== c.total) resize(c, t); });
+    es.addEventListener("result", e => add(c, JSON.parse(e.data)));
+    es.addEventListener("failed", e => { es.close(); fail(c, JSON.parse(e.data).error); });
+    es.addEventListener("done", () => { es.close(); refreshRecordings(); });
+    // EventSource reconnects on its own, which would rerun the backend; never let it.
+    es.onerror = () => { if (es.readyState !== EventSource.CLOSED) { es.close(); if (c.results.length < c.total) fail(c, "connection lost"); } };
+  }
+}
+
+function resize(c, total) {
+  c.total = total;
+  const grid = $(".grid", c.el);
+  grid.style.gridTemplateColumns = `repeat(${total <= 100 ? 10 : total <= 200 ? 15 : 20}, 1fr)`;
+  grid.innerHTML = '<div class="cell"></div>'.repeat(total);
+}
+
+function fail(c, msg) {
+  c.el.classList.add("failed");
+  $(".ticker", c.el).innerHTML = `<div class="msg">${esc(msg)}</div>`;
+}
+
+function add(c, r) {
+  c.results.push(r);
+  const cell = $(".grid", c.el).children[r.i];
+  if (cell) {
+    cell.className = "cell " + (r.error ? "err" : r.label == null ? "nolabel" : r.choice === r.label ? "ok" : "bad");
+    cell.style.opacity = r.error ? 1 : Math.max(0.12, r.confidence);
+    cell.title = r.error || `${r.who}${r.subject ? " · " + r.subject : ""}\n${r.choice} (${r.confidence.toFixed(2)}) · label: ${r.label ?? "–"} · ${Math.round(r.ms)} ms`;
+  }
+  const t = $(".ticker", c.el);
+  const mark = r.error ? "⚠️" : r.label == null ? "" : r.choice === r.label ? "✅" : "❌";
+  t.insertAdjacentHTML("beforeend", r.error
+    ? `<div><span class="who">${esc(r.who)}</span><span class="msg">error</span></div>`
+    : `<div><span class="who">${esc(r.who)}</span><span class="pill ${r.choice}">${r.choice}</span><span>${r.confidence.toFixed(2)}</span><span>${mark}</span><span class="ms">${Math.round(r.ms)} ms</span></div>`);
+  while (t.children.length > 6) t.firstChild.remove();
+  render(c);
+}
+
+function render(c) {
+  const ok = c.results.filter(r => !r.error);
+  const labelled = ok.filter(r => r.label != null);
+  const right = rs => rs.filter(r => r.choice === r.label).length / rs.length;
+  const sure = labelled.filter(r => r.confidence > 0.9);
+  const ms = ok.map(r => r.ms).sort((a, b) => a - b);
+  const set = (k, v) => $(`[data-k="${k}"]`, c.el).textContent = v;
+  set("acc", labelled.length ? pct(right(labelled)) : "–");
+  set("sure", sure.length ? pct(right(sure)) : "–");
+  set("sureShare", ok.length ? `${pct(ok.filter(r => r.confidence > 0.9).length / ok.length)} of emails` : "");
+  set("p50", ms.length ? Math.round(ms[ms.length >> 1]) + " ms" : "–");
+  const price = c.cfg.price;
+  const tokens = ok.reduce((s, r) => s + r.tokens, 0) / (ok.length || 1);
+  set("cost", c.cfg.runs_in === "This laptop" ? "$0" : price == null ? "?" : ok.length ? "$" + (tokens * 100 * price / 1e6).toFixed(4) : "–");
+  $(".bar div", c.el).style.width = pct(c.results.length / (c.total || 1));
+  calibration(c, labelled);
+}
+
+function calibration(c, labelled) {
+  const S = 190, pad = 22, span = S - pad - 8;
+  const x = p => pad + (p - 0.3) / 0.7 * span, y = a => S - pad - a * span;
+  let svg = `<rect x="${pad}" y="8" width="${span}" height="${span}" fill="none" stroke="#243044"/>
+    <line x1="${x(0.3)}" y1="${y(0.3)}" x2="${x(1)}" y2="${y(1)}" stroke="#7d8aa3" stroke-dasharray="4 4"/>
+    <text x="${pad}" y="${S - 6}">top probability →</text>
+    <text x="6" y="${S - pad}" transform="rotate(-90 12 ${S - pad})">right →</text>`;
+  const pts = [];
+  for (let i = 0; i < BUCKETS.length - 1; i++) {
+    const b = labelled.map(r => [Math.max(...Object.values(r.probabilities)), r.choice === r.label])
+      .filter(([p]) => p >= BUCKETS[i] && p < BUCKETS[i + 1]);
+    if (b.length) pts.push([b.reduce((s, [p]) => s + p, 0) / b.length, b.filter(([, ok]) => ok).length / b.length, b.length]);
+  }
+  if (pts.length > 1) svg += `<polyline fill="none" stroke="#38bdf8" stroke-width="2.5" points="${pts.map(([p, a]) => `${x(p)},${y(a)}`).join(" ")}"/>`;
+  svg += pts.map(([p, a, n]) => `<circle cx="${x(p)}" cy="${y(a)}" r="${Math.min(9, 2.5 + Math.sqrt(n))}" fill="#38bdf8"/>`).join("");
+  $("svg", c.el).innerHTML = svg;
+}
+
+async function refreshRecordings() {
+  const r = await (await fetch("/api/config")).json();
+  const sel = $("#recording"), have = new Set([...sel.options].map(o => o.value));
+  r.recordings.filter(x => !have.has(x)).forEach(x => sel.add(new Option(x, x), 1));
+}
+
+function run() {
+  const limit = +$("#limit").value, history = $("#history").checked, redact = $("#redact").checked;
+  const d = new Date(), session = "web-" + d.toISOString().slice(0, 19).replace(/[-:T]/g, "");
+  reset(Math.min(limit, cfg.labelled));
+  start(n => `/api/run?backend=${n}&limit=${limit}&history=${history}&redact=${redact}&session=${session}`);
+}
+
+function replay() {
+  const rec = $("#recording").value;
+  if (!rec) return;
+  reset(+$("#limit").value);
+  start(n => `/api/replay?recording=${encodeURIComponent(rec)}&backend=${n}&redact=${$("#redact").checked}`);
+}
+
+$("#run").onclick = run;
+$("#replay").onclick = replay;
+$("#limit").onchange = () => reset(+$("#limit").value);
+document.addEventListener("keydown", e => { if (e.key === "r" && !e.metaKey && e.target.tagName !== "SELECT") run(); });
+// Bookmarkable backup: /?replay=<recording>&limit=100 starts the replay on load.
+init().then(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get("limit")) { $("#limit").value = q.get("limit"); reset(+q.get("limit")); }
+  if (q.get("replay")) { $("#recording").value = q.get("replay"); replay(); }
+});
+</script>
+</body>
+</html>
