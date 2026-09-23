@@ -13,8 +13,8 @@ BACKENDS = {
     "laya":     {"base_url": os.getenv("LAYA_BASE_URL", "http://localhost:8000"), "key": None, "runs_in": "This laptop"},
 }
 
-# Pinned so nothing changes overnight.
-MODELS = {"jev": "jev-1.13.0", "eigenjev": "openjev-0.1", "laya": "english"}
+# Pinned so nothing changes overnight. EigenJev keys only accept "jev-latest" (serves openjev-0.1).
+MODELS = {"jev": "jev-1.13.0", "eigenjev": "jev-latest", "laya": "english"}
 
 PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "laya": 0.0}  # EigenJev price unknown
 
