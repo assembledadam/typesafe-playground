@@ -26,7 +26,7 @@ for name in sys.argv[1:] or BACKENDS:
         continue
     for email in EMAILS:
         for hist in (False, True):
-            state, qs = build(email, with_history=hist)
+            state, qs = build(email, history=hist)
             t = time.perf_counter()
             try:
                 r = c.system_one(state, qs)

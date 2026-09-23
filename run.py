@@ -1,6 +1,6 @@
 """Send the same emails and question to each backend; show answers live, then the summary.
 
-python run.py --backend jev|eigenjev|laya|all [--limit 100] [--history] [--no-redact] [--unlabelled]
+python run.py --backend jev|eigenjev|laya|all [--limit 100] [--history] [--profile] [--no-redact] [--unlabelled]
 python run.py --replay out/run-....json     # re-print a recorded run at its original pace, no network
 """
 
@@ -22,7 +22,7 @@ from questions import CATEGORY, build
 console = Console(highlight=False)
 EMAILS = Path("data/emails.jsonl")
 LABELS = Path("data/labels.jsonl")
-WORKERS = {"laya": 1, "jev": 4}  # Laya: one local model, parallel only queues. Jev: throttles bursts.
+WORKERS = {"laya": 1, "kev": 1, "jev": 4}  # Local models: parallel only queues. Jev: throttles bursts.
 COLOURS = {"action": "bold yellow", "review": "cyan", "other": "dim"}
 
 
@@ -60,12 +60,12 @@ def line(rec: dict, redact: bool) -> str:
 
 
 def header(run: dict) -> None:
-    hist = " · with sender history" if run["history"] else ""
-    console.print(Rule(f"[bold]{run['backend']}[/] · {run['runs_in']} · {run['model']}{hist}"))
+    extra = (" · + sender history" if run["history"] else "") + (" · + Adam's profile" if run.get("profile") else "")
+    console.print(Rule(f"[bold]{run['backend']}[/] · {run['runs_in']} · {run['model']}{extra}"))
 
 
-def ask(c, email: dict, history: bool, t0: float) -> dict:
-    state, questions = build(email, history)
+def ask(c, email: dict, history: bool, profile: bool, t0: float) -> dict:
+    state, questions = build(email, history, profile)
     rec = {
         "id": email["id"],
         "label": email["label"],
@@ -90,12 +90,12 @@ def connect(name: str):
     return c
 
 
-def stream(c, name: str, emails: list[dict], history: bool, names: dict) -> Iterator[dict]:
+def stream(c, name: str, emails: list[dict], history: bool, profile: bool, names: dict) -> Iterator[dict]:
     """Records in completion order; shared by the terminal and the web UI."""
     t0 = time.perf_counter()
     by_id = {e["id"]: e for e in emails}
     with ThreadPoolExecutor(WORKERS.get(name, 8)) as pool:
-        futures = [pool.submit(ask, c, e, history, t0) for e in emails]
+        futures = [pool.submit(ask, c, e, history, profile, t0) for e in emails]
         for f in as_completed(futures):
             rec = f.result()
             e = by_id[rec["id"]]
@@ -103,21 +103,22 @@ def stream(c, name: str, emails: list[dict], history: bool, names: dict) -> Iter
             yield rec
 
 
-def new_run(name: str, history: bool) -> dict:
-    return {"backend": name, "runs_in": BACKENDS[name]["runs_in"], "model": MODELS[name], "history": history, "records": []}
+def new_run(name: str, history: bool, profile: bool) -> dict:
+    return {"backend": name, "runs_in": BACKENDS[name]["runs_in"], "model": MODELS[name],
+            "history": history, "profile": profile, "records": []}
 
 
-def run_backend(name: str, emails: list[dict], history: bool, redact: bool, names: dict) -> dict | None:
+def run_backend(name: str, emails: list[dict], history: bool, profile: bool, redact: bool, names: dict) -> dict | None:
     try:
         c = connect(name)
     except Exception as e:
         console.print(f"[red]Skipping {name}: {type(e).__name__}: {str(e)[:80]}[/]")
         return None
 
-    run = new_run(name, history)
+    run = new_run(name, history, profile)
     header(run)
     t0 = time.perf_counter()
-    for rec in stream(c, name, emails, history, names):
+    for rec in stream(c, name, emails, history, profile, names):
         run["records"].append(rec)
         console.print(line(rec, redact))
     console.print(f"[dim]{len(emails)} emails in {time.perf_counter() - t0:.1f} s[/]\n")
@@ -141,6 +142,7 @@ def main() -> None:
     ap.add_argument("--backend", choices=[*BACKENDS, "all"], default="all")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--history", action="store_true", help="tell backends whether Adam has emailed the sender")
+    ap.add_argument("--profile", action="store_true", help="tell backends what Adam cares about and who he works with")
     ap.add_argument("--redact", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--unlabelled", action="store_true", help="all fetched emails, no accuracy")
     ap.add_argument("--record", help="where to save the run (default out/run-<timestamp>.json)")
@@ -153,7 +155,7 @@ def main() -> None:
         emails = load_emails(args.unlabelled, args.limit)
         names = redacted_names(emails)
         backends = list(BACKENDS) if args.backend == "all" else [args.backend]
-        runs = [r for n in backends if (r := run_backend(n, emails, args.history, args.redact, names))]
+        runs = [r for n in backends if (r := run_backend(n, emails, args.history, args.profile, args.redact, names))]
         out = Path(args.record or f"out/run-{datetime.now():%Y%m%d-%H%M%S}.json")
         out.parent.mkdir(exist_ok=True)
         out.write_text(json.dumps({"runs": runs}, ensure_ascii=False))

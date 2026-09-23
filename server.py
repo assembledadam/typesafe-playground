@@ -61,7 +61,7 @@ def config():
 
 
 @app.get("/api/run")
-def run(backend: str, limit: int = 100, history: bool = False, redact: bool = True, session: str = ""):
+def run(backend: str, limit: int = 100, history: bool = False, profile: bool = False, redact: bool = True, session: str = ""):
     if backend not in BACKENDS:
         raise HTTPException(404)
     emails = load_emails(False, limit)
@@ -77,8 +77,8 @@ def run(backend: str, limit: int = 100, history: bool = False, redact: bool = Tr
         except Exception as e:
             yield event("failed", {"error": f"{type(e).__name__}: {str(e)[:120]}"})
             return
-        rec_run = new_run(backend, history)
-        for rec in stream(c, backend, emails, history, names):
+        rec_run = new_run(backend, history, profile)
+        for rec in stream(c, backend, emails, history, profile, names):
             rec_run["records"].append(rec)
             yield event("result", for_screen(rec, index, by_id, redact))
         # One file per backend so three parallel streams never write the same file.

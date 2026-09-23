@@ -24,7 +24,7 @@ def load(paths: list[str]) -> list[dict]:
 
 
 def run_name(run: dict) -> str:
-    return run["backend"] + (" +history" if run["history"] else "")
+    return run["backend"] + (" +history" if run["history"] else "") + (" +profile" if run.get("profile") else "")
 
 
 def answer(rec: dict) -> dict | None:

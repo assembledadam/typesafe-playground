@@ -11,12 +11,13 @@ BACKENDS = {
     "jev":      {"base_url": "https://api.typesafe.ai",       "key": "TYPESAFE_API_KEY", "runs_in": "US"},
     "eigenjev": {"base_url": os.getenv("EIGENJEV_BASE_URL"),  "key": "EIGENJEV_API_KEY", "runs_in": "EU (Berlin)"},
     "laya":     {"base_url": os.getenv("LAYA_BASE_URL", "http://localhost:8000"), "key": None, "runs_in": "This laptop"},
+    "kev":      {"base_url": os.getenv("KEV_BASE_URL", "http://localhost:8009"),  "key": None, "runs_in": "This laptop"},
 }
 
 # Pinned so nothing changes overnight. EigenJev keys only accept "jev-latest" (serves openjev-0.1).
-MODELS = {"jev": "jev-1.13.0", "eigenjev": "jev-latest", "laya": "english"}
+MODELS = {"jev": "jev-1.13.0", "eigenjev": "jev-latest", "laya": "english", "kev": "kev-latest"}
 
-PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "laya": 0.0}  # EigenJev price unknown
+PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "laya": 0.0, "kev": 0.0}  # EigenJev price unknown
 
 
 def client(name: str) -> TypeSafeClient:
