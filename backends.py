@@ -13,10 +13,10 @@ BACKENDS = {
     "laya":     {"base_url": os.getenv("LAYA_BASE_URL", "http://localhost:8000"), "key": None, "runs_in": "This laptop"},
 }
 
-# Filled in after the spike; None means the backend's default model.
-MODELS = {"jev": "jev-1.13.0", "eigenjev": None, "laya": "english"}
+# Pinned so nothing changes overnight.
+MODELS = {"jev": "jev-1.13.0", "eigenjev": "openjev-0.1", "laya": "english"}
 
-PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "laya": 0.0}
+PRICE_PER_M_INPUT = {"jev": 0.042, "eigenjev": None, "laya": 0.0}  # EigenJev price unknown
 
 
 def client(name: str) -> TypeSafeClient:
