@@ -13,6 +13,8 @@ from concurrent.futures import ThreadPoolExecutor
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 
+from questions import PROFILE
+
 QUERY = "-in:sent -in:chats -in:drafts -from:me"
 PER_SENDER_CAP = 5
 BODY_CHARS = 600
@@ -93,8 +95,8 @@ def read(msg_id: str) -> dict | None:
     }
 
 
-# Adam's out-of-office auto-replied to everyone, including cold pitches; that is not knowing them.
-NOT_AUTO_REPLY = '-subject:"out of the office"'
+# An out-of-office auto-replies to everyone, including cold pitches; that is not knowing them.
+NOT_AUTO_REPLY = f'-subject:"{PROFILE["auto_reply_subject"]}"'
 
 
 def sent_to_before(address: str, timestamp: int) -> bool:
@@ -104,7 +106,7 @@ def sent_to_before(address: str, timestamp: int) -> bool:
 
 
 def mark_history(emails: list[dict]) -> None:
-    """Has Adam emailed this sender BEFORE this email arrived? A later reply would leak the label.
+    """Have you emailed this sender BEFORE this email arrived? A later reply would leak the label.
 
     One search per sender at their latest email; per-email searches only where that says yes.
     """
@@ -116,10 +118,10 @@ def mark_history(emails: list[dict]) -> None:
         latest = max(group, key=lambda e: e["timestamp"])
         if not sent_to_before(latest["from_email"], latest["timestamp"]):
             for e in group:
-                e["adam_has_emailed_them"] = False
+                e["has_emailed_them"] = False
             return
         for e in group:
-            e["adam_has_emailed_them"] = e is latest or sent_to_before(e["from_email"], e["timestamp"])
+            e["has_emailed_them"] = e is latest or sent_to_before(e["from_email"], e["timestamp"])
 
     with ThreadPoolExecutor(2) as pool:
         list(pool.map(check, by_sender.values()))
@@ -133,15 +135,15 @@ def write(emails: list[dict]) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", type=int, default=1300)
-    ap.add_argument("--history-only", action="store_true", help="recompute adam_has_emailed_them on the existing file")
+    ap.add_argument("--history-only", action="store_true", help="recompute has_emailed_them on the existing file")
     args = ap.parse_args()
 
     if args.history_only:
         emails = [json.loads(l) for l in OUT.open()]
-        before = sum(e["adam_has_emailed_them"] for e in emails)
+        before = sum(e["has_emailed_them"] for e in emails)
         mark_history(emails)
         write(emails)
-        print(f"previously emailed: {before} -> {sum(e['adam_has_emailed_them'] for e in emails)}")
+        print(f"previously emailed: {before} -> {sum(e['has_emailed_them'] for e in emails)}")
         return
 
     RAW.mkdir(parents=True, exist_ok=True)
@@ -161,7 +163,7 @@ def main() -> None:
     mark_history(kept)
 
     write(kept)
-    known = sum(m["adam_has_emailed_them"] for m in kept)
+    known = sum(m["has_emailed_them"] for m in kept)
     print(f"fetched {len(fetched)}, kept {len(kept)} ({len(per_sender)} senders, {known} previously emailed) -> {OUT}")
 
 

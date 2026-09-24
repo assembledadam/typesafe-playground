@@ -5,3 +5,6 @@ out/
 .cache/
 __pycache__/
 *.log
+profile.json
+demo-build-brief.md
+jev-talk-research-brief.md

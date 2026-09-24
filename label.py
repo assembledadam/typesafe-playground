@@ -24,10 +24,10 @@ console = Console()
 
 
 def label_order(emails: list[dict], target: int) -> list[dict]:
-    """Half from senders Adam has emailed before, half strangers, interleaved."""
+    """Half from senders you have emailed before, half strangers, interleaved."""
     rng = random.Random(42)
-    known = [e for e in emails if e["adam_has_emailed_them"]]
-    unknown = [e for e in emails if not e["adam_has_emailed_them"]]
+    known = [e for e in emails if e["has_emailed_them"]]
+    unknown = [e for e in emails if not e["has_emailed_them"]]
     rng.shuffle(known)
     rng.shuffle(unknown)
     order = []
@@ -75,7 +75,7 @@ def main() -> None:
             break
         e = todo[0]
         console.clear()
-        known = "[green]emailed before[/]" if e["adam_has_emailed_them"] else "[yellow]stranger[/]"
+        known = "[green]emailed before[/]" if e["has_emailed_them"] else "[yellow]stranger[/]"
         console.print(f"[bold]{n}/{target}[/]  action {counts['action']} · review {counts['review']} · other {counts['other']}\n")
         console.print(Panel(
             f"[bold]{e['from_name']}[/] <{e['from_email']}>  {known}\n"

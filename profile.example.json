@@ -1,0 +1,20 @@
+{
+  "name": "Sam",
+  "company": "Acme",
+  "company_domain": "acme.com",
+  "role": "Founder of Acme (accounting software for dentists)",
+  "cares_about": [
+    "customer requests",
+    "investors",
+    "invoices and renewals",
+    "anything from the bank or the tax office addressed to me by name"
+  ],
+  "ignores": [
+    "sales emails",
+    "partnership pitches",
+    "generic newsletters",
+    "automated notifications"
+  ],
+  "colleagues": ["Alex Doe", "Jo Bloggs"],
+  "auto_reply_subject": "out of the office"
+}

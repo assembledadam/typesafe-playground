@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 import report
 from backends import BACKENDS, MODELS, PRICE_PER_M_INPUT
+from questions import NAME
 from run import connect, load_emails, new_run, redacted_names, stream
 
 app = FastAPI()
@@ -55,6 +56,7 @@ def config():
              "price": PRICE_PER_M_INPUT[n]}
             for n, b in BACKENDS.items()
         ],
+        "name": NAME,
         "labelled": len(load_emails(False, None)),
         # Backups for the stage first, then newest first.
         "recordings": sorted(sorted({p.stem.split("__")[0] for p in OUT.glob("*.json")}, reverse=True),

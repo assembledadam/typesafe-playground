@@ -17,7 +17,7 @@ from rich.rule import Rule
 
 import report
 from backends import BACKENDS, MODELS, client
-from questions import CATEGORY, build
+from questions import CATEGORY, NAME, PROFILE, build
 
 console = Console(highlight=False)
 EMAILS = Path("data/emails.jsonl")
@@ -42,8 +42,8 @@ def redacted_names(emails: list[dict]) -> dict[str, str]:
     for e in emails:
         if e["from_email"] in names:
             continue
-        role = ("Colleague" if e["from_domain"] == "claimer.com"
-                else "Contact" if e["adam_has_emailed_them"] else "Stranger")
+        role = ("Colleague" if e["from_domain"] == PROFILE["company_domain"]
+                else "Contact" if e["has_emailed_them"] else "Stranger")
         counts[role] = counts.get(role, 0) + 1
         names[e["from_email"]] = f"{role} {counts[role]}"
     return names
@@ -60,7 +60,7 @@ def line(rec: dict, redact: bool) -> str:
 
 
 def header(run: dict) -> None:
-    extra = (" · + sender history" if run["history"] else "") + (" · + Adam's profile" if run.get("profile") else "")
+    extra = (" · + sender history" if run["history"] else "") + (" · + profile" if run.get("profile") else "")
     console.print(Rule(f"[bold]{run['backend']}[/] · {run['runs_in']} · {run['model']}{extra}"))
 
 
@@ -69,7 +69,7 @@ def ask(c, email: dict, history: bool, profile: bool, t0: float) -> dict:
     rec = {
         "id": email["id"],
         "label": email["label"],
-        "known_sender": email["adam_has_emailed_them"],
+        "known_sender": email["has_emailed_them"],
         "request": {"state": state, "questions": {k: q.model_dump(mode="json") for k, q in questions.items()}},
     }
     start = time.perf_counter()
@@ -141,8 +141,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--backend", choices=[*BACKENDS, "all"], default="all")
     ap.add_argument("--limit", type=int)
-    ap.add_argument("--history", action="store_true", help="tell backends whether Adam has emailed the sender")
-    ap.add_argument("--profile", action="store_true", help="tell backends what Adam cares about and who he works with")
+    ap.add_argument("--history", action="store_true", help=f"tell backends whether {NAME} has emailed the sender")
+    ap.add_argument("--profile", action="store_true", help=f"tell backends what {NAME} cares about and who they work with (profile.json)")
     ap.add_argument("--redact", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--unlabelled", action="store_true", help="all fetched emails, no accuracy")
     ap.add_argument("--record", help="where to save the run (default out/run-<timestamp>.json)")

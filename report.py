@@ -46,7 +46,7 @@ def summarise(run: dict) -> dict:
         for c in CATEGORIES
         if (rows := [r for r in labelled if r["label"] == c])
     ]
-    # Cold emails: strangers Adam labelled as ignorable. How many does the backend flag as action?
+    # Cold emails: strangers you labelled as ignorable. How many does the backend flag as action?
     cold = [r for r in labelled if r["label"] == "other" and not r["known_sender"]]
     ms = sorted(r["ms"] for r in ok)
     price = PRICE_PER_M_INPUT.get(run["backend"])

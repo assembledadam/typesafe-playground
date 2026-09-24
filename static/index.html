@@ -65,8 +65,8 @@
 
 <div class="controls">
   <label>Emails <select id="limit"><option>50</option><option selected>100</option><option>300</option></select></label>
-  <label><input type="checkbox" id="history"> + Has Adam emailed the sender?</label>
-  <label><input type="checkbox" id="profile"> + What Adam cares about</label>
+  <label><input type="checkbox" id="history"> + Has <span class="me">me</span> emailed the sender?</label>
+  <label><input type="checkbox" id="profile"> + What <span class="me">me</span> cares about</label>
   <label><input type="checkbox" id="redact" checked> Redact senders</label>
   <button class="go" id="run">Run ▶</button>
   <span class="spacer"></span>
@@ -102,6 +102,7 @@ async function init() {
   const w = Math.max(...cfg.backends.map(b => b.name.length)) + 3;
   $("#code").innerHTML = "BACKENDS = {\n" + cfg.backends.map(b =>
     `  ${('"' + b.name + '":').padEnd(w)} <span class="url">"${esc(b.base_url)}"</span>,`).join("\n") + "\n}";
+  document.querySelectorAll(".me").forEach(el => el.textContent = cfg.name);
   for (const r of cfg.recordings) $("#recording").add(new Option(r, r));
   $("#cols").innerHTML = cfg.backends.map(b => {
     const [flag, where] = PLACES[b.runs_in] || ["", b.runs_in];
